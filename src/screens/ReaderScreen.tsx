@@ -584,7 +584,7 @@ export function ReaderScreen({
             <span className="min-w-0 flex-1 truncate text-center font-mono text-[10px] lg:text-[11px] tracking-[0.18em] text-paper-faint">
               {article.sourceName}
             </span>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
                 disabled={loadState !== 'ready' || translationState === 'loading'}
@@ -598,7 +598,11 @@ export function ReaderScreen({
                 ) : (
                   <Languages size={14} strokeWidth={1.7} className={showTranslation ? 'text-cinnabar' : 'text-paper-muted'} />
                 )}
-                <span className={`font-mono text-[10px] tracking-[0.08em] ${showTranslation ? 'text-cinnabar-soft' : 'text-paper-muted'}`}>
+                <span
+                  className={`hidden font-mono text-[10px] tracking-[0.08em] min-[400px]:inline ${
+                    showTranslation ? 'text-cinnabar-soft' : 'text-paper-muted'
+                  }`}
+                >
                   {translationState === 'loading'
                     ? '翻译中'
                     : translationState === 'error'
@@ -606,6 +610,46 @@ export function ReaderScreen({
                       : showTranslation
                         ? '原文'
                         : '翻译'}
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={!canSpeakOriginal}
+                onClick={() => void speakOriginal()}
+                aria-label={speechState === 'speaking-original' ? '停止朗读原文' : '朗读原文'}
+                className="flex h-9 items-center gap-0.5 px-1 transition-colors duration-200 disabled:opacity-40"
+              >
+                {speechState === 'speaking-original' ? (
+                  <Square size={13} strokeWidth={1.7} className="text-cinnabar" />
+                ) : (
+                  <Volume2 size={13} strokeWidth={1.7} className="text-paper-muted" />
+                )}
+                <span
+                  className={`font-mono text-[10px] tracking-[0.04em] ${
+                    speechState === 'speaking-original' ? 'text-cinnabar-soft' : 'text-paper-muted'
+                  }`}
+                >
+                  原
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={!canSpeakTranslation && speechState !== 'speaking-translation'}
+                onClick={() => void speakTranslation()}
+                aria-label={speechState === 'speaking-translation' ? '停止朗读译文' : '朗读译文'}
+                className="flex h-9 items-center gap-0.5 px-1 transition-colors duration-200 disabled:opacity-40"
+              >
+                {speechState === 'speaking-translation' ? (
+                  <Square size={13} strokeWidth={1.7} className="text-cinnabar" />
+                ) : (
+                  <Volume2 size={13} strokeWidth={1.7} className="text-paper-muted" />
+                )}
+                <span
+                  className={`font-mono text-[10px] tracking-[0.04em] ${
+                    speechState === 'speaking-translation' ? 'text-cinnabar-soft' : 'text-paper-muted'
+                  }`}
+                >
+                  译
                 </span>
               </button>
               <button
@@ -620,7 +664,7 @@ export function ReaderScreen({
                 ) : (
                   <BookmarkPlus size={14} strokeWidth={1.7} className="text-paper-muted" />
                 )}
-                <span className={`hidden font-mono text-[10px] tracking-[0.08em] min-[390px]:inline ${saved ? 'text-cinnabar-soft' : 'text-paper-muted'}`}>
+                <span className={`hidden font-mono text-[10px] tracking-[0.08em] min-[400px]:inline ${saved ? 'text-cinnabar-soft' : 'text-paper-muted'}`}>
                   {saved ? '已收藏' : '收藏'}
                 </span>
               </button>
@@ -632,7 +676,11 @@ export function ReaderScreen({
                   className="flex h-9 items-center gap-1 px-1 text-paper-muted hover:text-cinnabar transition-colors duration-200"
                 >
                   <MessageSquare size={14} strokeWidth={1.7} className={commentsOpen ? 'text-cinnabar' : 'text-paper-muted'} />
-                  <span className={`font-mono text-[10px] tracking-[0.08em] ${commentsOpen ? 'text-cinnabar-soft' : 'text-paper-muted'}`}>
+                  <span
+                    className={`font-mono text-[10px] tracking-[0.08em] ${
+                      commentsOpen ? 'text-cinnabar-soft' : 'text-paper-muted'
+                    } ${commentCount != null && commentCount > 0 ? '' : 'hidden min-[400px]:inline'}`}
+                  >
                     {commentCount != null && commentCount > 0 ? commentCount : '跟贴'}
                   </span>
                 </button>
@@ -647,48 +695,6 @@ export function ReaderScreen({
                 <Globe size={14} strokeWidth={1.7} className="text-paper-muted" />
               </button>
             </div>
-          </div>
-          <div className="page-x lg:px-8 max-w-4xl mx-auto w-full flex items-center gap-1 pb-1">
-            <button
-              type="button"
-              disabled={!canSpeakOriginal}
-              onClick={() => void speakOriginal()}
-              aria-label={speechState === 'speaking-original' ? '停止朗读原文' : '朗读原文'}
-              className="flex h-8 items-center gap-1.5 px-1.5 transition-colors duration-200 disabled:opacity-40"
-            >
-              {speechState === 'speaking-original' ? (
-                <Square size={13} strokeWidth={1.7} className="text-cinnabar" />
-              ) : (
-                <Volume2 size={13} strokeWidth={1.7} className="text-paper-muted" />
-              )}
-              <span
-                className={`font-mono text-[10px] tracking-[0.08em] ${
-                  speechState === 'speaking-original' ? 'text-cinnabar-soft' : 'text-paper-muted'
-                }`}
-              >
-                {speechState === 'speaking-original' ? '停止原文' : '读原文'}
-              </span>
-            </button>
-            <button
-              type="button"
-              disabled={!canSpeakTranslation && speechState !== 'speaking-translation'}
-              onClick={() => void speakTranslation()}
-              aria-label={speechState === 'speaking-translation' ? '停止朗读译文' : '朗读译文'}
-              className="flex h-8 items-center gap-1.5 px-1.5 transition-colors duration-200 disabled:opacity-40"
-            >
-              {speechState === 'speaking-translation' ? (
-                <Square size={13} strokeWidth={1.7} className="text-cinnabar" />
-              ) : (
-                <Volume2 size={13} strokeWidth={1.7} className="text-paper-muted" />
-              )}
-              <span
-                className={`font-mono text-[10px] tracking-[0.08em] ${
-                  speechState === 'speaking-translation' ? 'text-cinnabar-soft' : 'text-paper-muted'
-                }`}
-              >
-                {speechState === 'speaking-translation' ? '停止译文' : '读译文'}
-              </span>
-            </button>
           </div>
         </header>
 
