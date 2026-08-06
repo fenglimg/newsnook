@@ -23,6 +23,10 @@ import {
 import type { TranslatedArticleContent, TranslationPrefs } from '../features/translation/types'
 import { fetchCommentCount, supportsComments } from '../features/comments/service'
 import { CommentsDrawer } from '../features/comments/components/CommentsDrawer'
+import { resolveSpeakLocale } from '../features/speech/locale'
+import { createSpeechService } from '../features/speech/service'
+import { buildSpeakText } from '../features/speech/text'
+import type { SpeechPlaybackState } from '../features/speech/types'
 
 interface Props {
   article: Article
@@ -69,6 +73,9 @@ export function ReaderScreen({
   const translationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingPartialRef = useRef<TranslatedArticleContent | null>(null)
   const partialFrameRef = useRef(0)
+  const speechRef = useRef(createSpeechService())
+  const [speechState, setSpeechState] = useState<SpeechPlaybackState>('idle')
+  const [speechError, setSpeechError] = useState('')
   const canComment = useMemo(
     () => supportsComments({ ...article, originUrl: resolvedOriginUrl || article.originUrl }),
     [article, resolvedOriginUrl],
@@ -226,6 +233,9 @@ export function ReaderScreen({
   }, [html, loadState, showTranslation, translated])
 
   useEffect(() => {
+    void speechRef.current.stop()
+    setSpeechState('idle')
+    setSpeechError('')
     translationAbortRef.current?.abort()
     translationAbortRef.current = null
     if (translationTimeoutRef.current) clearTimeout(translationTimeoutRef.current)
@@ -244,6 +254,7 @@ export function ReaderScreen({
 
   useEffect(
     () => () => {
+      void speechRef.current.stop()
       translationAbortRef.current?.abort()
       if (translationTimeoutRef.current) clearTimeout(translationTimeoutRef.current)
     },
@@ -396,6 +407,68 @@ export function ReaderScreen({
     pendingPartialRef.current = null
   }, [])
 
+  const translationSpeakMode =
+    translationPrefs.displayMode === 'compare' ? 'translation-compare' : 'translation'
+
+  const canSpeakOriginal = loadState === 'ready' && html.trim().length > 0
+  const canSpeakTranslation =
+    loadState === 'ready' &&
+    translationState === 'idle' &&
+    !!translated &&
+    buildSpeakText(translated.title, translated.html, translationSpeakMode).trim().length > 0
+
+  const stopSpeech = useCallback(async () => {
+    await speechRef.current.stop()
+    setSpeechState('idle')
+  }, [])
+
+  const speakOriginal = async () => {
+    if (speechState === 'speaking-original') {
+      await stopSpeech()
+      return
+    }
+    setSpeechError('')
+    setSpeechState('speaking-original')
+    try {
+      const text = buildSpeakText(article.title, html, 'original')
+      const lang = resolveSpeakLocale({
+        kind: 'original',
+        sourceLanguage: translated?.resolvedSourceLanguage ?? translationPrefs.sourceLanguage,
+        targetLanguage: translationPrefs.targetLanguage,
+        sampleText: text,
+      })
+      await speechRef.current.speakText(text, lang)
+      setSpeechState((s) => (s === 'speaking-original' ? 'idle' : s))
+    } catch {
+      setSpeechError('当前设备可能未安装该语言的语音包')
+      setSpeechState('error')
+    }
+  }
+
+  const speakTranslation = async () => {
+    if (speechState === 'speaking-translation') {
+      await stopSpeech()
+      return
+    }
+    if (!translated) return
+    setSpeechError('')
+    setSpeechState('speaking-translation')
+    try {
+      const text = buildSpeakText(translated.title, translated.html, translationSpeakMode)
+      const lang = resolveSpeakLocale({
+        kind: 'translation',
+        sourceLanguage: translationPrefs.sourceLanguage,
+        targetLanguage: translationPrefs.targetLanguage,
+        sampleText: text,
+      })
+      await speechRef.current.speakText(text, lang)
+      setSpeechState((s) => (s === 'speaking-translation' ? 'idle' : s))
+    } catch {
+      setSpeechError('当前设备可能未安装该语言的语音包')
+      setSpeechState('error')
+    }
+  }
+
   const toggleTranslation = async () => {
     if (loadState !== 'ready') return
 
@@ -537,6 +610,36 @@ export function ReaderScreen({
               </button>
               <button
                 type="button"
+                disabled={!canSpeakOriginal}
+                onClick={() => void speakOriginal()}
+                aria-label={speechState === 'speaking-original' ? '停止朗读原文' : '朗读原文'}
+                className="flex h-9 items-center gap-1 px-1 transition-colors duration-200 disabled:opacity-40"
+              >
+                <span
+                  className={`font-mono text-[10px] tracking-[0.08em] ${
+                    speechState === 'speaking-original' ? 'text-cinnabar-soft' : 'text-paper-muted'
+                  }`}
+                >
+                  {speechState === 'speaking-original' ? '停止' : '读原文'}
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={!canSpeakTranslation && speechState !== 'speaking-translation'}
+                onClick={() => void speakTranslation()}
+                aria-label={speechState === 'speaking-translation' ? '停止朗读译文' : '朗读译文'}
+                className="flex h-9 items-center gap-1 px-1 transition-colors duration-200 disabled:opacity-40"
+              >
+                <span
+                  className={`font-mono text-[10px] tracking-[0.08em] ${
+                    speechState === 'speaking-translation' ? 'text-cinnabar-soft' : 'text-paper-muted'
+                  }`}
+                >
+                  {speechState === 'speaking-translation' ? '停止' : '读译文'}
+                </span>
+              </button>
+              <button
+                type="button"
                 onClick={() => onToggleLater(article)}
                 aria-pressed={saved}
                 aria-label={saved ? '取消收藏' : '收藏'}
@@ -609,6 +712,11 @@ export function ReaderScreen({
               {showTranslation && translated?.usedFallback && translationState === 'idle' && (
                 <p className="mt-2 font-mono text-[9.5px] tracking-[0.08em] text-paper-faint">
                   未可靠识别原文语言，已按英语翻译
+                </p>
+              )}
+              {speechError && (
+                <p role="alert" className="mt-2 font-mono text-[9.5px] tracking-[0.08em] text-cinnabar-soft">
+                  {speechError}
                 </p>
               )}
               {translationError && (
