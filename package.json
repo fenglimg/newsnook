@@ -37,7 +37,7 @@
     "test:jazzyear-dates": "npx tsx scripts/jazzyear-dates.test.ts",
     "test:finance-sources": "npx tsx scripts/finance-sources.test.ts",
     "test:high-signal": "npx tsx scripts/high-signal-sources.test.ts",
-    "test:speech": "npx tsx scripts/speech-text.test.ts",
+    "test:speech": "npx tsx scripts/speech-text.test.ts && npx tsx scripts/speech-service.test.ts",
     "bergamot:init": "node scripts/bergamot-init.mjs",
     "preview": "vite preview",
     "assets": "node scripts/generate-android-assets.mjs",
@@ -55,6 +55,7 @@
   },
   "dependencies": {
     "@capacitor-community/media": "^9.1.0",
+    "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor/android": "8.4.2",
     "@capacitor/app": "8.0.1",
     "@capacitor/browser": "8.0.1",
