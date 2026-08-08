@@ -143,6 +143,7 @@ export async function fetchSourceText(
   if (
     source.isCustom ||
     source.id.startsWith('custom_') ||
+    (typeof window !== 'undefined' && new URL(rawUrl).origin === window.location.origin) ||
     (options?.url && options.url !== source.url)
   ) {
     return fetchAbsoluteText(rawUrl, { userAgent: ua, signal })
