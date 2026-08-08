@@ -74,7 +74,6 @@ export const CATEGORIES: NewsCategory[] = [
     short: '科技',
     caption: '网易科技 · IT之家 · 少数派 · 极客公园 · Solidot · 阮一峰 · 小众软件 · V2EX · Google 科技',
     sourceIds: [
-      'horizon-curated',
       'netease-tech',
       'ithome',
       'sspai',

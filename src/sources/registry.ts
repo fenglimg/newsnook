@@ -121,16 +121,6 @@ function neteaseChannel(
 }
 
 export const SOURCES: NewsSource[] = [
-  {
-    id: 'horizon-curated',
-    name: 'Horizon 精选',
-    label: 'Horizon',
-    group: 'tech',
-    kind: 'feed',
-    url: 'https://horizon.241412.xyz/feeds/curated.xml',
-    siteUrl: 'https://horizon.241412.xyz/',
-    enabled: true,
-  },
   // —— 网易频道（旧版索引中仍返回非空列表的频道）——
   neteaseChannel('netease', '网易热点', 'T1348647909107', {
     label: '网易',
