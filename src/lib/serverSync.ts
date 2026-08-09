@@ -7,6 +7,7 @@
 const PREFIX = 'newsnook:'
 const CACHE_PREFIXES = ['cache:v3:', 'body:', 'feed-trans:']
 const LOCAL_ONLY_KEYS = new Set(['appUpdate', 'splash-seen'])
+const REQUEST_TIMEOUT_MS = 4000
 const ENDPOINT = '/api/sync/state'
 
 let hydrated = false
@@ -37,13 +38,17 @@ function snapshot(): Record<string, string> {
 }
 
 async function putState(values: Record<string, string>): Promise<void> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   const response = await fetch(ENDPOINT, {
     method: 'PUT',
     credentials: 'include',
     cache: 'no-store',
+    signal: controller.signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), values }),
   })
+  clearTimeout(timeout)
   if (!response.ok) throw new Error(`sync upload failed: ${response.status}`)
 }
 
@@ -51,7 +56,14 @@ async function putState(values: Record<string, string>): Promise<void> {
 export async function hydrateServerStorage(): Promise<void> {
   if (!enabled()) return
   try {
-    const response = await fetch(ENDPOINT, { credentials: 'include', cache: 'no-store' })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+    const response = await fetch(ENDPOINT, {
+      credentials: 'include',
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
     if (response.status === 404) {
       await putState(snapshot())
       hydrated = true
