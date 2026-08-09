@@ -5,7 +5,8 @@
  */
 
 const PREFIX = 'newsnook:'
-const SYNC_KEYS = ['preferences', 'enabled', 'presets', 'later-items', 'later', 'read']
+const CACHE_PREFIXES = ['cache:v3:', 'body:', 'feed-trans:']
+const LOCAL_ONLY_KEYS = new Set(['appUpdate', 'splash-seen'])
 const ENDPOINT = '/api/sync/state'
 
 let hydrated = false
@@ -22,8 +23,14 @@ function enabled(): boolean {
 
 function snapshot(): Record<string, string> {
   const values: Record<string, string> = {}
-  for (const key of SYNC_KEYS) {
-    const value = localStorage.getItem(PREFIX + key)
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const fullKey = localStorage.key(index)
+    if (!fullKey?.startsWith(PREFIX)) continue
+    const key = fullKey.slice(PREFIX.length)
+    if (LOCAL_ONLY_KEYS.has(key) || CACHE_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+      continue
+    }
+    const value = localStorage.getItem(fullKey)
     if (value !== null) values[key] = value
   }
   return values
@@ -54,8 +61,11 @@ export async function hydrateServerStorage(): Promise<void> {
     const payload = (await response.json()) as { version?: number; values?: Record<string, string> }
     const values = payload.values && typeof payload.values === 'object' ? payload.values : {}
     if (Object.keys(values).length) {
-      for (const key of SYNC_KEYS) {
-        const value = values[key]
+      const local = snapshot()
+      for (const key of Object.keys(local)) {
+        if (!(key in values)) localStorage.removeItem(PREFIX + key)
+      }
+      for (const [key, value] of Object.entries(values)) {
         if (typeof value === 'string') localStorage.setItem(PREFIX + key, value)
       }
     } else {
