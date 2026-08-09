@@ -92,6 +92,28 @@ const ReaderScreen = lazy(() =>
 
 const DEFAULT_ENABLED = SOURCES.filter((source) => source.enabled).map((source) => source.id)
 
+const MOBILE_INITIAL_SOURCE_LIMIT = 4
+const DESKTOP_INITIAL_SOURCE_LIMIT = 8
+
+function isArchiveSource(source: import('./sources/registry').NewsSource | undefined): boolean {
+  return Boolean(source?.url.includes('/feeds/archive.xml'))
+}
+
+function initialSourceBatch(
+  ids: string[],
+  extraSources: import('./sources/registry').NewsSource[],
+): { priority: string[]; deferred: string[] } {
+  const candidates = ids.filter((id) => !isArchiveSource(findSource(id, extraSources)))
+  const curated = candidates.filter((id) => findSource(id, extraSources)?.url.includes('/feeds/curated.xml'))
+  const rest = candidates.filter((id) => !curated.includes(id))
+  const mobile =
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches
+  const limit = mobile ? MOBILE_INITIAL_SOURCE_LIMIT : DESKTOP_INITIAL_SOURCE_LIMIT
+  const priority = [...curated, ...rest].slice(0, limit)
+  const selected = new Set(priority)
+  return { priority, deferred: candidates.filter((id) => !selected.has(id)) }
+}
+
 function emptyCacheSnapshot() {
   return {
     bodies: { count: 0, bytes: 0, pinned: 0, pinnedBytes: 0 },
@@ -384,7 +406,13 @@ export default function App() {
 
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false
-      void refreshRef.current(fetchIds)
+      const batch = initialSourceBatch(fetchIds, prefs.customSources ?? [])
+      void refreshRef.current(batch.priority).then(() => {
+        if (!batch.deferred.length) return
+        window.setTimeout(() => {
+          void refreshRef.current(batch.deferred)
+        }, 1200)
+      })
       return
     }
 
