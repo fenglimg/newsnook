@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
 
 import type { Article } from './types'
+import { hydrateServerStorage, scheduleServerStorageSync } from './serverSync'
 
 const PREFIX = 'newsnook:'
 /** 列表缓存超过这个时长就不再展示，避免弱网时看到过于陈旧的版面 */
@@ -112,6 +113,7 @@ function write(key: string, value: unknown, options?: WriteOptions): void {
         reportNativeStorageError('write', error)
       })
     }
+    if (!options?.localOnly) scheduleServerStorageSync()
   } catch (error) {
     // 存储写满或被禁用时静默降级，不影响阅读
     console.warn('[storage] localStorage write failed', error)
@@ -161,7 +163,10 @@ export function removeKeys(keys: string[]): void {
       })
     }
   }
+  scheduleServerStorageSync()
 }
+
+export { hydrateServerStorage }
 
 /**
  * localStorage 以 UTF-16 计费，用字符数 ×2 估算占用，

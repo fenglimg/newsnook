@@ -9,6 +9,7 @@ import { bootMark, bootMeasure } from './lib/startupPerf'
 import {
   hasSeenStartupSplash,
   hydrateNativeStorage,
+  hydrateServerStorage,
   loadPreferences,
   markStartupSplashSeen,
 } from './lib/storage'
@@ -23,6 +24,7 @@ const SPLASH_EXIT_MS = 320
 async function bootstrap(): Promise<void> {
   bootMark('hydrate-start')
   await hydrateNativeStorage()
+  await hydrateServerStorage()
   bootMark('hydrate-done')
   bootMeasure('hydrate', 'hydrate-start', 'hydrate-done')
   const theme = applyTheme(normalizePreferences(loadPreferences()).theme)
